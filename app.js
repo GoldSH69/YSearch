@@ -2,9 +2,17 @@ const API_BASE = "https://www.googleapis.com/youtube/v3";
 const KEY_STORAGE = "ysearch.youtubeApiKey";
 
 // --- 패스워드 인증 기능 ---
-const PASS = "__PASSWORD_PLACEHOLDER__"; // GitHub Actions 빌드 시 secrets.PASS로 치환됨
+const PASS_HASH = "__PASSWORD_HASH_PLACEHOLDER__"; // GitHub Actions 빌드 시 SHA-256 해시값으로 치환됨
 const CRYPTO_KEY = "ysearch_crypto_key_2026";
 const KEY_AUTH = "ysearch.auth";
+
+// 브라우저 내장 Web Crypto API를 사용한 SHA-256 해싱
+async function sha256(message) {
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 function encrypt(text) {
   let result = "";
@@ -29,11 +37,12 @@ function decrypt(encoded) {
   }
 }
 
-function checkAuth() {
+async function checkAuth() {
   const stored = localStorage.getItem(KEY_AUTH);
   if (stored) {
     const decrypted = decrypt(stored);
-    if (decrypted === PASS) {
+    const hash = await sha256(decrypted);
+    if (hash === PASS_HASH) {
       document.querySelector("#loginOverlay").classList.add("hidden");
       return true;
     }
@@ -49,10 +58,11 @@ const loginCard = document.querySelector(".login-card");
 const loginOverlay = document.querySelector("#loginOverlay");
 
 if (loginForm) {
-  loginForm.addEventListener("submit", (e) => {
+  loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const entered = loginPassword.value;
-    if (entered === PASS) {
+    const hash = await sha256(entered);
+    if (hash === PASS_HASH) {
       const encrypted = encrypt(entered);
       localStorage.setItem(KEY_AUTH, encrypted);
       loginOverlay.classList.add("hidden");

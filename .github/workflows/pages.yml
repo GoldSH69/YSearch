@@ -29,12 +29,17 @@ jobs:
         with:
           script: |
             const fs = require('fs');
+            const crypto = require('crypto');
             const pass = process.env.PASS_SECRET || '';
-            if (!pass) {
-              console.warn("Warning: PASS_SECRET is empty. Replacing with default placeholder value.");
+            let hash = '';
+            if (pass) {
+              hash = crypto.createHash('sha256').update(pass).digest('hex');
+              console.log("Password hash computed successfully.");
+            } else {
+              console.warn("Warning: PASS_SECRET is empty.");
             }
             let content = fs.readFileSync('app.js', 'utf8');
-            content = content.replace('__PASSWORD_PLACEHOLDER__', pass);
+            content = content.replace('__PASSWORD_HASH_PLACEHOLDER__', hash);
             fs.writeFileSync('app.js', content, 'utf8');
         env:
           PASS_SECRET: ${{ secrets.PASS }}
