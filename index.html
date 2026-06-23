@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YSearch - YouTube Research Console</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="toolbar" aria-label="YouTube search filters">
+        <div class="brand">
+          <div class="mark">Y</div>
+          <div>
+            <h1>YSearch</h1>
+            <p>YouTube 영상/채널 분석 검색</p>
+          </div>
+        </div>
+
+        <form id="searchForm" class="filter-grid">
+          <label class="field wide">
+            <span>API 키</span>
+            <input id="apiKey" type="password" autocomplete="off" placeholder="YouTube Data API v3 key" />
+          </label>
+
+          <label class="field wide">
+            <span>키워드</span>
+            <input id="keyword" type="search" placeholder="예: ai news, 여행 브이로그, 쇼츠 마케팅" required />
+          </label>
+
+          <label class="field">
+            <span>업로드 시작일</span>
+            <input id="publishedAfter" type="date" />
+          </label>
+
+          <label class="field">
+            <span>업로드 종료일</span>
+            <input id="publishedBefore" type="date" />
+          </label>
+
+          <label class="field">
+            <span>국가</span>
+            <select id="regionCode">
+              <option value="">전체</option>
+              <option value="KR">대한민국</option>
+              <option value="US">미국</option>
+              <option value="JP">일본</option>
+              <option value="GB">영국</option>
+              <option value="CA">캐나다</option>
+              <option value="AU">호주</option>
+              <option value="DE">독일</option>
+              <option value="FR">프랑스</option>
+              <option value="IN">인도</option>
+              <option value="BR">브라질</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>언어</span>
+            <select id="language">
+              <option value="">전체</option>
+              <option value="ko">한국어</option>
+              <option value="en">영어</option>
+              <option value="ja">일본어</option>
+              <option value="zh-Hans">중국어 간체</option>
+              <option value="es">스페인어</option>
+              <option value="fr">프랑스어</option>
+              <option value="de">독일어</option>
+              <option value="pt">포르투갈어</option>
+              <option value="hi">힌디어</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Shorts 여부</span>
+            <select id="shorts">
+              <option value="">전체</option>
+              <option value="yes">Shorts만</option>
+              <option value="no">일반 영상만</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>정렬</span>
+            <select id="order">
+              <option value="relevance">관련도</option>
+              <option value="date">최신순</option>
+              <option value="viewCount">조회수순</option>
+              <option value="rating">평점순</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>최소 조회수</span>
+            <input id="minViews" type="number" min="0" step="1000" placeholder="0" />
+          </label>
+
+          <label class="field">
+            <span>최소 댓글 수</span>
+            <input id="minComments" type="number" min="0" step="10" placeholder="0" />
+          </label>
+
+          <label class="field">
+            <span>최소 좋아요 수</span>
+            <input id="minLikes" type="number" min="0" step="100" placeholder="0" />
+          </label>
+
+          <label class="field">
+            <span>최소 구독자 수</span>
+            <input id="minSubscribers" type="number" min="0" step="1000" placeholder="0" />
+          </label>
+
+          <label class="field">
+            <span>최소 길이(분)</span>
+            <input id="minMinutes" type="number" min="0" step="1" placeholder="0" />
+          </label>
+
+          <label class="field">
+            <span>최대 길이(분)</span>
+            <input id="maxMinutes" type="number" min="0" step="1" placeholder="60" />
+          </label>
+
+          <label class="field">
+            <span>가져올 수</span>
+            <select id="maxResults">
+              <option value="10">10</option>
+              <option value="25" selected>25</option>
+              <option value="50">50</option>
+            </select>
+          </label>
+
+          <div class="actions">
+            <button type="submit" class="primary">검색</button>
+            <button type="button" id="exportCsv">CSV</button>
+            <button type="button" id="clearKey">키 삭제</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="summary" aria-live="polite">
+        <div>
+          <strong id="resultCount">0</strong>
+          <span>개 결과</span>
+        </div>
+        <div>
+          <strong id="quotaHint">약 0</strong>
+          <span>quota units</span>
+        </div>
+        <p id="statusText">API 키와 키워드를 입력한 뒤 검색하세요.</p>
+      </section>
+
+      <section class="table-wrap" aria-label="Search results">
+        <table>
+          <thead>
+            <tr>
+              <th>업로드 날짜</th>
+              <th>영상</th>
+              <th>채널명</th>
+              <th>구독자 수</th>
+              <th>조회수</th>
+              <th>댓글 수</th>
+              <th>좋아요 수</th>
+              <th>국가</th>
+              <th>언어</th>
+              <th>Shorts</th>
+              <th>길이</th>
+              <th>키워드</th>
+            </tr>
+          </thead>
+          <tbody id="resultsBody">
+            <tr>
+              <td colspan="12" class="empty">검색 결과가 여기에 표시됩니다.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

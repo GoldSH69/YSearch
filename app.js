@@ -1,0 +1,354 @@
+const API_BASE = "https://www.googleapis.com/youtube/v3";
+const KEY_STORAGE = "ysearch.youtubeApiKey";
+
+const form = document.querySelector("#searchForm");
+const resultsBody = document.querySelector("#resultsBody");
+const statusText = document.querySelector("#statusText");
+const resultCount = document.querySelector("#resultCount");
+const quotaHint = document.querySelector("#quotaHint");
+const exportButton = document.querySelector("#exportCsv");
+const clearKeyButton = document.querySelector("#clearKey");
+const apiKeyInput = document.querySelector("#apiKey");
+
+let currentRows = [];
+
+apiKeyInput.value = localStorage.getItem(KEY_STORAGE) || "";
+
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  await runSearch();
+});
+
+exportButton.addEventListener("click", () => {
+  if (!currentRows.length) {
+    setStatus("내보낼 검색 결과가 없습니다.");
+    return;
+  }
+
+  downloadCsv(currentRows);
+});
+
+clearKeyButton.addEventListener("click", () => {
+  localStorage.removeItem(KEY_STORAGE);
+  apiKeyInput.value = "";
+  setStatus("저장된 API 키를 삭제했습니다.");
+});
+
+async function runSearch() {
+  const filters = getFilters();
+
+  if (!filters.apiKey || !filters.keyword) {
+    setStatus("API 키와 키워드는 필수입니다.");
+    return;
+  }
+
+  localStorage.setItem(KEY_STORAGE, filters.apiKey);
+  setLoading(true);
+  setStatus("YouTube에서 영상 목록을 가져오는 중입니다.");
+  renderRows([]);
+
+  try {
+    const searchItems = await youtubeRequest("/search", filters.apiKey, {
+      part: "snippet",
+      type: "video",
+      q: filters.keyword,
+      maxResults: filters.maxResults,
+      order: filters.order,
+      regionCode: filters.regionCode,
+      relevanceLanguage: filters.language,
+      publishedAfter: toStartIso(filters.publishedAfter),
+      publishedBefore: toEndIso(filters.publishedBefore),
+      safeSearch: "none",
+    });
+
+    if (!searchItems.items.length) {
+      currentRows = [];
+      renderRows([]);
+      setStatus("조건에 맞는 영상이 없습니다.");
+      return;
+    }
+
+    setStatus("영상 통계와 채널 구독자 수를 합치는 중입니다.");
+
+    const videoIds = searchItems.items.map((item) => item.id.videoId).filter(Boolean);
+    const videos = await youtubeRequest("/videos", filters.apiKey, {
+      part: "snippet,contentDetails,statistics",
+      id: videoIds.join(","),
+      maxResults: videoIds.length,
+    });
+
+    const channelIds = [...new Set(videos.items.map((item) => item.snippet.channelId))];
+    const channels = await youtubeRequest("/channels", filters.apiKey, {
+      part: "snippet,statistics",
+      id: channelIds.join(","),
+      maxResults: channelIds.length,
+    });
+
+    const channelMap = new Map(channels.items.map((item) => [item.id, item]));
+    const rows = videos.items.map((video) => toRow(video, channelMap, filters.keyword));
+    currentRows = applyClientFilters(rows, filters);
+
+    renderRows(currentRows);
+    resultCount.textContent = currentRows.length.toLocaleString("ko-KR");
+    quotaHint.textContent = `약 ${estimateQuota(videoIds.length, channelIds.length).toLocaleString("ko-KR")}`;
+    setStatus(
+      currentRows.length
+        ? "검색 완료. CSV로 내려받거나 조건을 조정할 수 있습니다."
+        : "YouTube 결과는 있었지만 수치/길이/Shorts 조건을 통과한 영상이 없습니다.",
+    );
+  } catch (error) {
+    console.error(error);
+    currentRows = [];
+    renderRows([]);
+    setStatus(error.message || "검색 중 오류가 발생했습니다.");
+  } finally {
+    setLoading(false);
+  }
+}
+
+function getFilters() {
+  const value = (id) => document.querySelector(`#${id}`).value.trim();
+
+  return {
+    apiKey: value("apiKey"),
+    keyword: value("keyword"),
+    publishedAfter: value("publishedAfter"),
+    publishedBefore: value("publishedBefore"),
+    regionCode: value("regionCode"),
+    language: value("language"),
+    shorts: value("shorts"),
+    order: value("order"),
+    minViews: numberValue("minViews"),
+    minComments: numberValue("minComments"),
+    minLikes: numberValue("minLikes"),
+    minSubscribers: numberValue("minSubscribers"),
+    minMinutes: numberValue("minMinutes"),
+    maxMinutes: numberValue("maxMinutes"),
+    maxResults: value("maxResults") || "25",
+  };
+}
+
+function numberValue(id) {
+  const raw = document.querySelector(`#${id}`).value;
+  return raw === "" ? null : Number(raw);
+}
+
+async function youtubeRequest(path, apiKey, params) {
+  const url = new URL(`${API_BASE}${path}`);
+  url.searchParams.set("key", apiKey);
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      url.searchParams.set(key, value);
+    }
+  });
+
+  const response = await fetch(url);
+  const data = await response.json();
+
+  if (!response.ok) {
+    const detail = data?.error?.message || response.statusText;
+    throw new Error(`YouTube API 오류: ${detail}`);
+  }
+
+  return data;
+}
+
+function toRow(video, channelMap, keyword) {
+  const channel = channelMap.get(video.snippet.channelId);
+  const durationSeconds = parseIsoDuration(video.contentDetails.duration);
+  const stats = video.statistics || {};
+  const channelStats = channel?.statistics || {};
+  const country =
+    video.snippet.defaultAudioLanguage?.split("-").pop()?.toUpperCase() ||
+    video.snippet.defaultLanguage?.split("-").pop()?.toUpperCase() ||
+    channel?.snippet?.country ||
+    "";
+  const language =
+    video.snippet.defaultAudioLanguage || video.snippet.defaultLanguage || "";
+  const url = `https://www.youtube.com/watch?v=${video.id}`;
+
+  return {
+    publishedAt: video.snippet.publishedAt,
+    videoUrl: url,
+    title: video.snippet.title,
+    thumbnail: video.snippet.thumbnails?.medium?.url || video.snippet.thumbnails?.default?.url || "",
+    channelTitle: video.snippet.channelTitle,
+    subscriberCount: toNumber(channelStats.subscriberCount),
+    hiddenSubscriberCount: channelStats.hiddenSubscriberCount === true,
+    viewCount: toNumber(stats.viewCount),
+    commentCount: toNumber(stats.commentCount),
+    likeCount: toNumber(stats.likeCount),
+    country,
+    language,
+    isShorts: durationSeconds > 0 && durationSeconds <= 60,
+    durationSeconds,
+    keyword,
+  };
+}
+
+function applyClientFilters(rows, filters) {
+  return rows.filter((row) => {
+    if (filters.minViews !== null && row.viewCount < filters.minViews) return false;
+    if (filters.minComments !== null && row.commentCount < filters.minComments) return false;
+    if (filters.minLikes !== null && row.likeCount < filters.minLikes) return false;
+    if (
+      filters.minSubscribers !== null &&
+      (row.hiddenSubscriberCount || row.subscriberCount < filters.minSubscribers)
+    ) {
+      return false;
+    }
+    if (filters.minMinutes !== null && row.durationSeconds < filters.minMinutes * 60) return false;
+    if (filters.maxMinutes !== null && row.durationSeconds > filters.maxMinutes * 60) return false;
+    if (filters.shorts === "yes" && !row.isShorts) return false;
+    if (filters.shorts === "no" && row.isShorts) return false;
+    return true;
+  });
+}
+
+function renderRows(rows) {
+  resultCount.textContent = rows.length.toLocaleString("ko-KR");
+
+  if (!rows.length) {
+    resultsBody.innerHTML = '<tr><td colspan="12" class="empty">검색 결과가 없습니다.</td></tr>';
+    return;
+  }
+
+  resultsBody.innerHTML = rows
+    .map(
+      (row) => `
+        <tr>
+          <td>${formatDate(row.publishedAt)}</td>
+          <td>
+            <div class="video-cell">
+              <img class="thumb" src="${escapeHtml(row.thumbnail)}" alt="" loading="lazy" />
+              <div>
+                <a class="title" href="${escapeHtml(row.videoUrl)}" target="_blank" rel="noreferrer">${escapeHtml(row.title)}</a>
+                <span class="url">${escapeHtml(row.videoUrl)}</span>
+              </div>
+            </div>
+          </td>
+          <td>${escapeHtml(row.channelTitle)}</td>
+          <td>${row.hiddenSubscriberCount ? "비공개" : formatNumber(row.subscriberCount)}</td>
+          <td>${formatNumber(row.viewCount)}</td>
+          <td>${formatNumber(row.commentCount)}</td>
+          <td>${formatNumber(row.likeCount)}</td>
+          <td>${escapeHtml(row.country || "-")}</td>
+          <td>${escapeHtml(row.language || "-")}</td>
+          <td><span class="tag ${row.isShorts ? "" : "no"}">${row.isShorts ? "Shorts" : "일반"}</span></td>
+          <td>${formatDuration(row.durationSeconds)}</td>
+          <td>${escapeHtml(row.keyword)}</td>
+        </tr>
+      `,
+    )
+    .join("");
+}
+
+function downloadCsv(rows) {
+  const headers = [
+    "업로드 날짜",
+    "영상 링크",
+    "제목",
+    "채널명",
+    "구독자 수",
+    "조회수",
+    "댓글 수",
+    "좋아요 수",
+    "국가",
+    "언어",
+    "Shorts 여부",
+    "영상 길이",
+    "키워드",
+  ];
+
+  const body = rows.map((row) => [
+    formatDate(row.publishedAt),
+    row.videoUrl,
+    row.title,
+    row.channelTitle,
+    row.hiddenSubscriberCount ? "비공개" : row.subscriberCount,
+    row.viewCount,
+    row.commentCount,
+    row.likeCount,
+    row.country,
+    row.language,
+    row.isShorts ? "Shorts" : "일반",
+    formatDuration(row.durationSeconds),
+    row.keyword,
+  ]);
+
+  const csv = [headers, ...body]
+    .map((cells) => cells.map((cell) => `"${String(cell ?? "").replaceAll('"', '""')}"`).join(","))
+    .join("\n");
+  const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `ysearch-${new Date().toISOString().slice(0, 10)}.csv`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+function parseIsoDuration(duration) {
+  const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!match) return 0;
+  return Number(match[1] || 0) * 3600 + Number(match[2] || 0) * 60 + Number(match[3] || 0);
+}
+
+function formatDuration(seconds) {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  return hours
+    ? `${hours}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`
+    : `${minutes}:${String(secs).padStart(2, "0")}`;
+}
+
+function formatDate(value) {
+  return new Intl.DateTimeFormat("ko-KR", {
+    dateStyle: "medium",
+    timeZone: "Asia/Seoul",
+  }).format(new Date(value));
+}
+
+function formatNumber(value) {
+  return Number(value || 0).toLocaleString("ko-KR");
+}
+
+function toNumber(value) {
+  return Number(value || 0);
+}
+
+function toStartIso(date) {
+  return date ? `${date}T00:00:00Z` : "";
+}
+
+function toEndIso(date) {
+  return date ? `${date}T23:59:59Z` : "";
+}
+
+function estimateQuota(videoCount, channelCount) {
+  const searchCost = 100;
+  const videoCost = videoCount ? 1 : 0;
+  const channelCost = channelCount ? 1 : 0;
+  return searchCost + videoCost + channelCost;
+}
+
+function setStatus(message) {
+  statusText.textContent = message;
+}
+
+function setLoading(isLoading) {
+  form.querySelectorAll("button, input, select").forEach((element) => {
+    if (element.id !== "clearKey") element.disabled = isLoading;
+  });
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
