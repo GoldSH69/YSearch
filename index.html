@@ -109,7 +109,6 @@
                   <option value="rating">평점순</option>
                 </select>
               </label>
-
               <label class="field span-2">
                 <span>분석 후보 수</span>
                 <select id="maxResults">
@@ -119,6 +118,10 @@
                   <option value="200">200</option>
                 </select>
               </label>
+            </div>
+            <div class="group-actions">
+              <button type="submit" class="primary">유튜브 검색</button>
+              <button type="button" id="clearKey" class="danger">API 키 삭제</button>
             </div>
           </fieldset>
 
@@ -169,12 +172,14 @@
                 </select>
               </label>
             </div>
+            <div class="group-actions">
+              <button type="button" id="applyFilter" class="accent-btn">필터 적용</button>
+              <button type="button" id="resetFilter" class="secondary">필터 초기화</button>
+            </div>
           </fieldset>
 
-          <div class="actions">
-            <button type="submit" class="primary">검색</button>
-            <button type="button" id="exportCsv">CSV 내보내기</button>
-            <button type="button" id="clearKey">키 삭제</button>
+          <div class="form-actions">
+            <button type="button" id="exportCsv" class="success">CSV 내보내기</button>
           </div>
         </form>
       </section>

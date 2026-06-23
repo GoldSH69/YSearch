@@ -164,22 +164,39 @@ function updateFilteredResults() {
   );
 }
 
+// --- 내부 필터링 제어 버튼 및 이벤트 ---
+const applyFilterBtn = document.querySelector("#applyFilter");
+const resetFilterBtn = document.querySelector("#resetFilter");
+
+if (applyFilterBtn) {
+  applyFilterBtn.addEventListener("click", () => {
+    updateFilteredResults();
+  });
+}
+
+if (resetFilterBtn) {
+  resetFilterBtn.addEventListener("click", () => {
+    clientFilterInputs.forEach((id) => {
+      const input = document.querySelector(`#${id}`);
+      if (input) {
+        input.value = "";
+      }
+    });
+    updateFilteredResults();
+  });
+}
+
+// Enter 키를 눌렀을 때만 필터 적용
 clientFilterInputs.forEach((id) => {
   const input = document.querySelector(`#${id}`);
-  if (input) {
-    const eventType = input.tagName === "SELECT" ? "change" : "input";
-    input.addEventListener(eventType, () => {
-      updateFilteredResults();
+  if (input && input.tagName === "INPUT") {
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        updateFilteredResults();
+        input.blur();
+      }
     });
-
-    if (input.tagName === "INPUT") {
-      input.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          input.blur();
-        }
-      });
-    }
   }
 });
 
