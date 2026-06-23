@@ -2,7 +2,7 @@ const API_BASE = "https://www.googleapis.com/youtube/v3";
 const KEY_STORAGE = "ysearch.youtubeApiKey";
 
 // --- 패스워드 인증 기능 ---
-const PASS = "1234"; // 평문 비밀번호 (필요에 따라 변경하여 사용)
+const PASS = "__PASSWORD_PLACEHOLDER__"; // GitHub Actions 빌드 시 secrets.PASS로 치환됨
 const CRYPTO_KEY = "ysearch_crypto_key_2026";
 const KEY_AUTH = "ysearch.auth";
 
