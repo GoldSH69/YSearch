@@ -108,12 +108,12 @@
 
           <label class="field">
             <span>최소 댓글 수</span>
-            <input id="minComments" type="number" min="0" step="10" placeholder="0" />
+            <input id="minComments" type="number" min="0" step="1" placeholder="입력 시 적용" />
           </label>
 
           <label class="field">
             <span>최소 좋아요 수</span>
-            <input id="minLikes" type="number" min="0" step="100" placeholder="0" />
+            <input id="minLikes" type="number" min="0" step="1" placeholder="입력 시 적용" />
           </label>
 
           <label class="field">
@@ -136,11 +136,12 @@
           </label>
 
           <label class="field">
-            <span>가져올 수</span>
+            <span>분석 후보 수</span>
             <select id="maxResults">
-              <option value="10">10</option>
-              <option value="25" selected>25</option>
+              <option value="25">25</option>
               <option value="50">50</option>
+              <option value="100" selected>100</option>
+              <option value="200">200</option>
             </select>
           </label>
 

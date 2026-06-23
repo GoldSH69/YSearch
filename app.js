@@ -55,26 +55,24 @@ async function runSearch() {
     return;
   }
 
+  if (
+    filters.minSubscribers !== null &&
+    filters.maxSubscribers !== null &&
+    filters.minSubscribers > filters.maxSubscribers
+  ) {
+    setStatus("구독자 수 범위는 왼쪽 값이 오른쪽 값보다 작거나 같아야 합니다.");
+    return;
+  }
+
   localStorage.setItem(KEY_STORAGE, filters.apiKey);
   setLoading(true);
   setStatus("YouTube에서 영상 목록을 가져오는 중입니다.");
   renderRows([]);
 
   try {
-    const searchItems = await youtubeRequest("/search", filters.apiKey, {
-      part: "snippet",
-      type: "video",
-      q: filters.keyword,
-      maxResults: filters.maxResults,
-      order: filters.order,
-      regionCode: filters.regionCode,
-      relevanceLanguage: filters.language,
-      publishedAfter: toStartIso(filters.publishedAfter),
-      publishedBefore: toEndIso(filters.publishedBefore),
-      safeSearch: "none",
-    });
+    const searchItems = await fetchSearchItems(filters);
 
-    if (!searchItems.items.length) {
+    if (!searchItems.length) {
       currentRows = [];
       renderRows([]);
       setStatus("조건에 맞는 영상이 없습니다.");
@@ -83,19 +81,11 @@ async function runSearch() {
 
     setStatus("영상 통계와 채널 구독자 수를 합치는 중입니다.");
 
-    const videoIds = searchItems.items.map((item) => item.id.videoId).filter(Boolean);
-    const videos = await youtubeRequest("/videos", filters.apiKey, {
-      part: "snippet,contentDetails,statistics",
-      id: videoIds.join(","),
-      maxResults: videoIds.length,
-    });
+    const videoIds = searchItems.map((item) => item.id.videoId).filter(Boolean);
+    const videos = await fetchVideoItems(filters.apiKey, videoIds);
 
     const channelIds = [...new Set(videos.items.map((item) => item.snippet.channelId))];
-    const channels = await youtubeRequest("/channels", filters.apiKey, {
-      part: "snippet,statistics",
-      id: channelIds.join(","),
-      maxResults: channelIds.length,
-    });
+    const channels = await fetchChannelItems(filters.apiKey, channelIds);
 
     const channelMap = new Map(channels.items.map((item) => [item.id, item]));
     const rows = videos.items.map((video) => toRow(video, channelMap, filters.keyword));
@@ -103,11 +93,11 @@ async function runSearch() {
 
     renderRows(currentRows);
     resultCount.textContent = currentRows.length.toLocaleString("ko-KR");
-    quotaHint.textContent = `약 ${estimateQuota(videoIds.length, channelIds.length).toLocaleString("ko-KR")}`;
+    quotaHint.textContent = `약 ${estimateQuota(videoIds.length, channelIds.length, filters.maxResults).toLocaleString("ko-KR")}`;
     setStatus(
       currentRows.length
-        ? "검색 완료. CSV로 내려받거나 조건을 조정할 수 있습니다."
-        : "YouTube 결과는 있었지만 수치/길이/Shorts 조건을 통과한 영상이 없습니다.",
+        ? `검색 완료. 후보 ${rows.length.toLocaleString("ko-KR")}개 중 ${currentRows.length.toLocaleString("ko-KR")}개가 필터를 통과했습니다.`
+        : `후보 ${rows.length.toLocaleString("ko-KR")}개를 확인했지만 필터를 통과한 영상이 없습니다. 적용 필터: ${describeActiveFilters(filters)}`,
     );
   } catch (error) {
     console.error(error);
@@ -138,7 +128,7 @@ function getFilters() {
     maxSubscribers: numberValue("maxSubscribers"),
     minMinutes: numberValue("minMinutes"),
     maxMinutes: numberValue("maxMinutes"),
-    maxResults: value("maxResults") || "25",
+    maxResults: Number(value("maxResults") || 100),
   };
 }
 
@@ -166,6 +156,65 @@ async function youtubeRequest(path, apiKey, params) {
   }
 
   return data;
+}
+
+async function fetchSearchItems(filters) {
+  const targetCount = Math.min(filters.maxResults, 200);
+  const items = [];
+  let pageToken = "";
+
+  while (items.length < targetCount) {
+    const pageSize = Math.min(50, targetCount - items.length);
+    const data = await youtubeRequest("/search", filters.apiKey, {
+      part: "snippet",
+      type: "video",
+      q: filters.keyword,
+      maxResults: pageSize,
+      order: filters.order,
+      regionCode: filters.regionCode,
+      relevanceLanguage: filters.language,
+      publishedAfter: toStartIso(filters.publishedAfter),
+      publishedBefore: toEndIso(filters.publishedBefore),
+      pageToken,
+      safeSearch: "none",
+    });
+
+    items.push(...data.items);
+    if (!data.nextPageToken) break;
+    pageToken = data.nextPageToken;
+  }
+
+  return items;
+}
+
+async function fetchVideoItems(apiKey, videoIds) {
+  const items = [];
+
+  for (const ids of chunk(videoIds, 50)) {
+    const data = await youtubeRequest("/videos", apiKey, {
+      part: "snippet,contentDetails,statistics",
+      id: ids.join(","),
+      maxResults: ids.length,
+    });
+    items.push(...data.items);
+  }
+
+  return { items };
+}
+
+async function fetchChannelItems(apiKey, channelIds) {
+  const items = [];
+
+  for (const ids of chunk(channelIds, 50)) {
+    const data = await youtubeRequest("/channels", apiKey, {
+      part: "snippet,statistics",
+      id: ids.join(","),
+      maxResults: ids.length,
+    });
+    items.push(...data.items);
+  }
+
+  return { items };
 }
 
 function toRow(video, channelMap, keyword) {
@@ -224,6 +273,27 @@ function applyClientFilters(rows, filters) {
     if (filters.shorts === "no" && row.isShorts) return false;
     return true;
   });
+}
+
+function describeActiveFilters(filters) {
+  const active = [];
+
+  if (filters.minViews !== null) active.push(`조회수 ${formatNumber(filters.minViews)} 이상`);
+  if (filters.minComments !== null) active.push(`댓글 ${formatNumber(filters.minComments)} 이상`);
+  if (filters.minLikes !== null) active.push(`좋아요 ${formatNumber(filters.minLikes)} 이상`);
+  if (filters.minSubscribers !== null || filters.maxSubscribers !== null) {
+    active.push(
+      `구독자 ${filters.minSubscribers === null ? "제한 없음" : formatNumber(filters.minSubscribers)} ~ ${
+        filters.maxSubscribers === null ? "제한 없음" : formatNumber(filters.maxSubscribers)
+      }`,
+    );
+  }
+  if (filters.minMinutes !== null) active.push(`길이 ${filters.minMinutes}분 이상`);
+  if (filters.maxMinutes !== null) active.push(`길이 ${filters.maxMinutes}분 이하`);
+  if (filters.shorts === "yes") active.push("Shorts만");
+  if (filters.shorts === "no") active.push("일반 영상만");
+
+  return active.length ? active.join(", ") : "없음";
 }
 
 function renderRows(rows) {
@@ -374,11 +444,21 @@ function toDateInputValue(date) {
   return `${year}-${month}-${day}`;
 }
 
-function estimateQuota(videoCount, channelCount) {
-  const searchCost = 100;
-  const videoCost = videoCount ? 1 : 0;
-  const channelCost = channelCount ? 1 : 0;
+function estimateQuota(videoCount, channelCount, requestedSearchCount) {
+  const searchCost = Math.ceil(requestedSearchCount / 50) * 100;
+  const videoCost = Math.ceil(videoCount / 50);
+  const channelCost = Math.ceil(channelCount / 50);
   return searchCost + videoCost + channelCost;
+}
+
+function chunk(items, size) {
+  const chunks = [];
+
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+
+  return chunks;
 }
 
 function setStatus(message) {
