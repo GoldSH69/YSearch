@@ -15,139 +15,149 @@
             <h1>YSearch</h1>
             <p>YouTube 영상/채널 분석 검색</p>
           </div>
-        </div>
+        <form id="searchForm">
+          <fieldset class="filter-group">
+            <legend>서버 검색 조건 (YouTube API 단계 필터)</legend>
+            <p class="group-desc">YouTube 서버에서 직접 일치하는 영상을 검색하는 조건들입니다. 이 조건이 좁혀질수록 API 할당량을 절약할 수 있습니다.</p>
+            <div class="filter-grid">
+              <label class="field span-3">
+                <span>API 키</span>
+                <input id="apiKey" type="password" autocomplete="off" placeholder="YouTube Data API v3 key" />
+              </label>
 
-        <form id="searchForm" class="filter-grid">
-          <label class="field wide">
-            <span>API 키</span>
-            <input id="apiKey" type="password" autocomplete="off" placeholder="YouTube Data API v3 key" />
-          </label>
+              <label class="field span-3">
+                <span>키워드</span>
+                <input id="keyword" type="search" placeholder="예: ai news, 여행 브이로그, 쇼츠 마케팅" required />
+              </label>
 
-          <label class="field wide">
-            <span>키워드</span>
-            <input id="keyword" type="search" placeholder="예: ai news, 여행 브이로그, 쇼츠 마케팅" required />
-          </label>
+              <label class="field span-2">
+                <span>기간 빠른 선택</span>
+                <select id="datePreset">
+                  <option value="">직접 입력</option>
+                  <option value="7d">최근 1주일</option>
+                  <option value="1m">최근 1개월</option>
+                  <option value="6m">최근 6개월</option>
+                  <option value="1y">최근 1년</option>
+                </select>
+              </label>
 
-          <label class="field">
-            <span>기간 빠른 선택</span>
-            <select id="datePreset">
-              <option value="">직접 입력</option>
-              <option value="7d">최근 1주일</option>
-              <option value="1m">최근 1개월</option>
-              <option value="6m">최근 6개월</option>
-              <option value="1y">최근 1년</option>
-            </select>
-          </label>
+              <label class="field span-2">
+                <span>업로드 시작일</span>
+                <input id="publishedAfter" type="date" />
+              </label>
 
-          <label class="field">
-            <span>업로드 시작일</span>
-            <input id="publishedAfter" type="date" />
-          </label>
+              <label class="field span-2">
+                <span>업로드 종료일</span>
+                <input id="publishedBefore" type="date" />
+              </label>
 
-          <label class="field">
-            <span>업로드 종료일</span>
-            <input id="publishedBefore" type="date" />
-          </label>
+              <label class="field span-1">
+                <span>국가</span>
+                <select id="regionCode">
+                  <option value="">전체</option>
+                  <option value="KR">대한민국</option>
+                  <option value="US">미국</option>
+                  <option value="JP">일본</option>
+                  <option value="GB">영국</option>
+                  <option value="CA">캐나다</option>
+                  <option value="AU">호주</option>
+                  <option value="DE">독일</option>
+                  <option value="FR">프랑스</option>
+                  <option value="IN">인도</option>
+                  <option value="BR">브라질</option>
+                </select>
+              </label>
 
-          <label class="field">
-            <span>국가</span>
-            <select id="regionCode">
-              <option value="">전체</option>
-              <option value="KR">대한민국</option>
-              <option value="US">미국</option>
-              <option value="JP">일본</option>
-              <option value="GB">영국</option>
-              <option value="CA">캐나다</option>
-              <option value="AU">호주</option>
-              <option value="DE">독일</option>
-              <option value="FR">프랑스</option>
-              <option value="IN">인도</option>
-              <option value="BR">브라질</option>
-            </select>
-          </label>
+              <label class="field span-1">
+                <span>언어</span>
+                <select id="language">
+                  <option value="">전체</option>
+                  <option value="ko">한국어</option>
+                  <option value="en">영어</option>
+                  <option value="ja">일본어</option>
+                  <option value="zh-Hans">중국어 간체</option>
+                  <option value="es">스페인어</option>
+                  <option value="fr">프랑스어</option>
+                  <option value="de">독일어</option>
+                  <option value="pt">포르투갈어</option>
+                  <option value="hi">힌디어</option>
+                </select>
+              </label>
 
-          <label class="field">
-            <span>언어</span>
-            <select id="language">
-              <option value="">전체</option>
-              <option value="ko">한국어</option>
-              <option value="en">영어</option>
-              <option value="ja">일본어</option>
-              <option value="zh-Hans">중국어 간체</option>
-              <option value="es">스페인어</option>
-              <option value="fr">프랑스어</option>
-              <option value="de">독일어</option>
-              <option value="pt">포르투갈어</option>
-              <option value="hi">힌디어</option>
-            </select>
-          </label>
+              <label class="field span-2">
+                <span>정렬</span>
+                <select id="order">
+                  <option value="relevance">관련도</option>
+                  <option value="date">최신순</option>
+                  <option value="viewCount">조회수순</option>
+                  <option value="rating">평점순</option>
+                </select>
+              </label>
 
-          <label class="field">
-            <span>Shorts 여부</span>
-            <select id="shorts">
-              <option value="">전체</option>
-              <option value="yes">Shorts만</option>
-              <option value="no">일반 영상만</option>
-            </select>
-          </label>
-
-          <label class="field">
-            <span>정렬</span>
-            <select id="order">
-              <option value="relevance">관련도</option>
-              <option value="date">최신순</option>
-              <option value="viewCount">조회수순</option>
-              <option value="rating">평점순</option>
-            </select>
-          </label>
-
-          <label class="field">
-            <span>최소 조회수</span>
-            <input id="minViews" type="number" min="0" step="1000" placeholder="0" />
-          </label>
-
-          <label class="field">
-            <span>최소 댓글 수</span>
-            <input id="minComments" type="number" min="0" step="1" placeholder="입력 시 적용" />
-          </label>
-
-          <label class="field">
-            <span>최소 좋아요 수</span>
-            <input id="minLikes" type="number" min="0" step="1" placeholder="입력 시 적용" />
-          </label>
-
-          <label class="field">
-            <span>구독자 수</span>
-            <div class="range-inputs">
-              <input id="minSubscribers" type="number" min="0" step="1" value="0" aria-label="최소 구독자 수" />
-              <span>~</span>
-              <input id="maxSubscribers" type="number" min="0" step="1" value="500" aria-label="최대 구독자 수" />
+              <label class="field span-2">
+                <span>분석 후보 수</span>
+                <select id="maxResults">
+                  <option value="25">25</option>
+                  <option value="50">50</option>
+                  <option value="100" selected>100</option>
+                  <option value="200">200</option>
+                </select>
+              </label>
             </div>
-          </label>
+          </fieldset>
 
-          <label class="field">
-            <span>최소 길이(분)</span>
-            <input id="minMinutes" type="number" min="0" step="1" placeholder="0" />
-          </label>
+          <fieldset class="filter-group">
+            <legend>내부 필터링 조건 (브라우저 단계 실시간 필터)</legend>
+            <p class="group-desc">가져온 분석 후보 목록 중에서 조건에 맞는 영상들만 브라우저 내에서 추가로 선별하여 출력합니다.</p>
+            <div class="filter-grid">
+              <label class="field span-2">
+                <span>최소 조회수</span>
+                <input id="minViews" type="number" min="0" step="1000" placeholder="제한 없음" />
+              </label>
 
-          <label class="field">
-            <span>최대 길이(분)</span>
-            <input id="maxMinutes" type="number" min="0" step="1" placeholder="60" />
-          </label>
+              <label class="field span-2">
+                <span>최소 댓글 수</span>
+                <input id="minComments" type="number" min="0" step="1" placeholder="제한 없음" />
+              </label>
 
-          <label class="field">
-            <span>분석 후보 수</span>
-            <select id="maxResults">
-              <option value="25">25</option>
-              <option value="50">50</option>
-              <option value="100" selected>100</option>
-              <option value="200">200</option>
-            </select>
-          </label>
+              <label class="field span-2">
+                <span>최소 좋아요 수</span>
+                <input id="minLikes" type="number" min="0" step="1" placeholder="제한 없음" />
+              </label>
+
+              <label class="field span-2">
+                <span>구독자 수</span>
+                <div class="range-inputs">
+                  <input id="minSubscribers" type="number" min="0" step="1" placeholder="0" aria-label="최소 구독자 수" />
+                  <span>~</span>
+                  <input id="maxSubscribers" type="number" min="0" step="1" placeholder="제한 없음" aria-label="최대 구독자 수" />
+                </div>
+              </label>
+
+              <label class="field span-1">
+                <span>최소 길이(분)</span>
+                <input id="minMinutes" type="number" min="0" step="1" placeholder="0" />
+              </label>
+
+              <label class="field span-1">
+                <span>최대 길이(분)</span>
+                <input id="maxMinutes" type="number" min="0" step="1" placeholder="제한 없음" />
+              </label>
+
+              <label class="field span-2">
+                <span>Shorts 여부</span>
+                <select id="shorts">
+                  <option value="">전체</option>
+                  <option value="yes">Shorts만</option>
+                  <option value="no">일반 영상만</option>
+                </select>
+              </label>
+            </div>
+          </fieldset>
 
           <div class="actions">
             <button type="submit" class="primary">검색</button>
-            <button type="button" id="exportCsv">CSV</button>
+            <button type="button" id="exportCsv">CSV 내보내기</button>
             <button type="button" id="clearKey">키 삭제</button>
           </div>
         </form>

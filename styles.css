@@ -101,6 +101,45 @@ h1 {
   grid-column: span 3;
 }
 
+.field.span-1 {
+  grid-column: span 1;
+}
+
+.field.span-2 {
+  grid-column: span 2;
+}
+
+.field.span-3 {
+  grid-column: span 3;
+}
+
+.filter-group {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 24px;
+  background: #fbfcfe;
+}
+
+.filter-group legend {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: var(--blue);
+  padding: 4px 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+}
+
+.group-desc {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 2px;
+  margin-bottom: 18px;
+  line-height: 1.4;
+}
+
 .field span {
   color: #354057;
   font-size: 13px;
@@ -139,9 +178,10 @@ select:focus {
 
 .actions {
   display: flex;
-  grid-column: span 3;
-  align-items: end;
+  justify-content: flex-end;
+  align-items: center;
   gap: 10px;
+  margin-top: 8px;
 }
 
 button {
@@ -292,8 +332,14 @@ td {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .field.wide,
-  .actions {
+  .field.span-1,
+  .field.span-2,
+  .field.span-3 {
+    grid-column: span 1;
+  }
+
+  .field.span-2,
+  .field.span-3 {
     grid-column: span 2;
   }
 }
@@ -310,7 +356,9 @@ td {
 
   .filter-grid,
   .field.wide,
-  .actions {
+  .field.span-1,
+  .field.span-2,
+  .field.span-3 {
     grid-template-columns: 1fr;
     grid-column: span 1;
   }
