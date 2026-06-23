@@ -95,6 +95,7 @@ const publishedAfterInput = document.querySelector("#publishedAfter");
 const publishedBeforeInput = document.querySelector("#publishedBefore");
 
 let currentRows = [];
+let allCandidates = [];
 
 apiKeyInput.value = localStorage.getItem(KEY_STORAGE) || "";
 
@@ -128,6 +129,61 @@ datePresetInput.addEventListener("change", () => {
   });
 });
 
+// --- 실시간 내부 필터링 적용 ---
+const clientFilterInputs = [
+  "minViews",
+  "minComments",
+  "minLikes",
+  "minSubscribers",
+  "maxSubscribers",
+  "minMinutes",
+  "maxMinutes",
+  "shorts"
+];
+
+function updateFilteredResults() {
+  if (!allCandidates.length) return;
+  const filters = getFilters();
+
+  if (
+    filters.minSubscribers !== null &&
+    filters.maxSubscribers !== null &&
+    filters.minSubscribers > filters.maxSubscribers
+  ) {
+    setStatus("구독자 수 범위는 왼쪽 값이 오른쪽 값보다 작거나 같아야 합니다.");
+    return;
+  }
+
+  currentRows = applyClientFilters(allCandidates, filters);
+  renderRows(currentRows);
+  resultCount.textContent = currentRows.length.toLocaleString("ko-KR");
+  setStatus(
+    currentRows.length
+      ? `필터 적용 완료. 후보 ${allCandidates.length.toLocaleString("ko-KR")}개 중 ${currentRows.length.toLocaleString("ko-KR")}개가 필터를 통과했습니다.`
+      : `후보 ${allCandidates.length.toLocaleString("ko-KR")}개를 확인했지만 필터를 통과한 영상이 없습니다. 적용 필터: ${describeActiveFilters(filters)}`,
+  );
+}
+
+clientFilterInputs.forEach((id) => {
+  const input = document.querySelector(`#${id}`);
+  if (input) {
+    const eventType = input.tagName === "SELECT" ? "change" : "input";
+    input.addEventListener(eventType, () => {
+      updateFilteredResults();
+    });
+
+    if (input.tagName === "INPUT") {
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          input.blur();
+        }
+      });
+    }
+  }
+});
+
+
 async function runSearch() {
   const filters = getFilters();
 
@@ -154,6 +210,7 @@ async function runSearch() {
     const searchItems = await fetchSearchItems(filters);
 
     if (!searchItems.length) {
+      allCandidates = [];
       currentRows = [];
       renderRows([]);
       setStatus("조건에 맞는 영상이 없습니다.");
@@ -169,19 +226,20 @@ async function runSearch() {
     const channels = await fetchChannelItems(filters.apiKey, channelIds);
 
     const channelMap = new Map(channels.items.map((item) => [item.id, item]));
-    const rows = videos.items.map((video) => toRow(video, channelMap, filters.keyword));
-    currentRows = applyClientFilters(rows, filters);
+    allCandidates = videos.items.map((video) => toRow(video, channelMap, filters.keyword));
+    currentRows = applyClientFilters(allCandidates, filters);
 
     renderRows(currentRows);
     resultCount.textContent = currentRows.length.toLocaleString("ko-KR");
     quotaHint.textContent = `약 ${estimateQuota(videoIds.length, channelIds.length, filters.maxResults).toLocaleString("ko-KR")}`;
     setStatus(
       currentRows.length
-        ? `검색 완료. 후보 ${rows.length.toLocaleString("ko-KR")}개 중 ${currentRows.length.toLocaleString("ko-KR")}개가 필터를 통과했습니다.`
-        : `후보 ${rows.length.toLocaleString("ko-KR")}개를 확인했지만 필터를 통과한 영상이 없습니다. 적용 필터: ${describeActiveFilters(filters)}`,
+        ? `검색 완료. 후보 ${allCandidates.length.toLocaleString("ko-KR")}개 중 ${currentRows.length.toLocaleString("ko-KR")}개가 필터를 통과했습니다.`
+        : `후보 ${allCandidates.length.toLocaleString("ko-KR")}개를 확인했지만 필터를 통과한 영상이 없습니다. 적용 필터: ${describeActiveFilters(filters)}`,
     );
   } catch (error) {
     console.error(error);
+    allCandidates = [];
     currentRows = [];
     renderRows([]);
     setStatus(error.message || "검색 중 오류가 발생했습니다.");
