@@ -29,6 +29,17 @@
           </label>
 
           <label class="field">
+            <span>기간 빠른 선택</span>
+            <select id="datePreset">
+              <option value="">직접 입력</option>
+              <option value="7d">최근 1주일</option>
+              <option value="1m">최근 1개월</option>
+              <option value="6m">최근 6개월</option>
+              <option value="1y">최근 1년</option>
+            </select>
+          </label>
+
+          <label class="field">
             <span>업로드 시작일</span>
             <input id="publishedAfter" type="date" />
           </label>
@@ -106,8 +117,12 @@
           </label>
 
           <label class="field">
-            <span>최소 구독자 수</span>
-            <input id="minSubscribers" type="number" min="0" step="1000" placeholder="0" />
+            <span>구독자 수</span>
+            <div class="range-inputs">
+              <input id="minSubscribers" type="number" min="0" step="1" value="0" aria-label="최소 구독자 수" />
+              <span>~</span>
+              <input id="maxSubscribers" type="number" min="0" step="1" value="500" aria-label="최대 구독자 수" />
+            </div>
           </label>
 
           <label class="field">

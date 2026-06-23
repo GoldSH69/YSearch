@@ -9,6 +9,9 @@ const quotaHint = document.querySelector("#quotaHint");
 const exportButton = document.querySelector("#exportCsv");
 const clearKeyButton = document.querySelector("#clearKey");
 const apiKeyInput = document.querySelector("#apiKey");
+const datePresetInput = document.querySelector("#datePreset");
+const publishedAfterInput = document.querySelector("#publishedAfter");
+const publishedBeforeInput = document.querySelector("#publishedBefore");
 
 let currentRows = [];
 
@@ -32,6 +35,16 @@ clearKeyButton.addEventListener("click", () => {
   localStorage.removeItem(KEY_STORAGE);
   apiKeyInput.value = "";
   setStatus("저장된 API 키를 삭제했습니다.");
+});
+
+datePresetInput.addEventListener("change", () => {
+  applyDatePreset(datePresetInput.value);
+});
+
+[publishedAfterInput, publishedBeforeInput].forEach((input) => {
+  input.addEventListener("input", () => {
+    datePresetInput.value = "";
+  });
 });
 
 async function runSearch() {
@@ -122,6 +135,7 @@ function getFilters() {
     minComments: numberValue("minComments"),
     minLikes: numberValue("minLikes"),
     minSubscribers: numberValue("minSubscribers"),
+    maxSubscribers: numberValue("maxSubscribers"),
     minMinutes: numberValue("minMinutes"),
     maxMinutes: numberValue("maxMinutes"),
     maxResults: value("maxResults") || "25",
@@ -195,6 +209,12 @@ function applyClientFilters(rows, filters) {
     if (
       filters.minSubscribers !== null &&
       (row.hiddenSubscriberCount || row.subscriberCount < filters.minSubscribers)
+    ) {
+      return false;
+    }
+    if (
+      filters.maxSubscribers !== null &&
+      (row.hiddenSubscriberCount || row.subscriberCount > filters.maxSubscribers)
     ) {
       return false;
     }
@@ -325,6 +345,33 @@ function toStartIso(date) {
 
 function toEndIso(date) {
   return date ? `${date}T23:59:59Z` : "";
+}
+
+function applyDatePreset(preset) {
+  if (!preset) return;
+
+  const end = new Date();
+  const start = new Date(end);
+
+  if (preset === "7d") {
+    start.setDate(start.getDate() - 7);
+  } else if (preset === "1m") {
+    start.setMonth(start.getMonth() - 1);
+  } else if (preset === "6m") {
+    start.setMonth(start.getMonth() - 6);
+  } else if (preset === "1y") {
+    start.setFullYear(start.getFullYear() - 1);
+  }
+
+  publishedAfterInput.value = toDateInputValue(start);
+  publishedBeforeInput.value = toDateInputValue(end);
+}
+
+function toDateInputValue(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function estimateQuota(videoCount, channelCount) {
