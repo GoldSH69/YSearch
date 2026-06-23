@@ -1,6 +1,77 @@
 const API_BASE = "https://www.googleapis.com/youtube/v3";
 const KEY_STORAGE = "ysearch.youtubeApiKey";
 
+// --- 패스워드 인증 기능 ---
+const PASS = "1234"; // 평문 비밀번호 (필요에 따라 변경하여 사용)
+const CRYPTO_KEY = "ysearch_crypto_key_2026";
+const KEY_AUTH = "ysearch.auth";
+
+function encrypt(text) {
+  let result = "";
+  for (let i = 0; i < text.length; i++) {
+    const charCode = text.charCodeAt(i) ^ CRYPTO_KEY.charCodeAt(i % CRYPTO_KEY.length);
+    result += String.fromCharCode(charCode);
+  }
+  return btoa(unescape(encodeURIComponent(result)));
+}
+
+function decrypt(encoded) {
+  try {
+    const text = decodeURIComponent(escape(atob(encoded)));
+    let result = "";
+    for (let i = 0; i < text.length; i++) {
+      const charCode = text.charCodeAt(i) ^ CRYPTO_KEY.charCodeAt(i % CRYPTO_KEY.length);
+      result += String.fromCharCode(charCode);
+    }
+    return result;
+  } catch (e) {
+    return "";
+  }
+}
+
+function checkAuth() {
+  const stored = localStorage.getItem(KEY_AUTH);
+  if (stored) {
+    const decrypted = decrypt(stored);
+    if (decrypted === PASS) {
+      document.querySelector("#loginOverlay").classList.add("hidden");
+      return true;
+    }
+  }
+  document.querySelector("#loginOverlay").classList.remove("hidden");
+  return false;
+}
+
+const loginForm = document.querySelector("#loginForm");
+const loginPassword = document.querySelector("#loginPassword");
+const loginError = document.querySelector("#loginError");
+const loginCard = document.querySelector(".login-card");
+const loginOverlay = document.querySelector("#loginOverlay");
+
+if (loginForm) {
+  loginForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const entered = loginPassword.value;
+    if (entered === PASS) {
+      const encrypted = encrypt(entered);
+      localStorage.setItem(KEY_AUTH, encrypted);
+      loginOverlay.classList.add("hidden");
+      loginError.textContent = "";
+    } else {
+      loginCard.classList.add("shake");
+      loginError.textContent = "비밀번호가 올바르지 않습니다.";
+      loginPassword.value = "";
+      loginPassword.focus();
+      setTimeout(() => {
+        loginCard.classList.remove("shake");
+      }, 400);
+    }
+  });
+}
+
+checkAuth();
+// -------------------------
+
 const form = document.querySelector("#searchForm");
 const resultsBody = document.querySelector("#resultsBody");
 const statusText = document.querySelector("#statusText");

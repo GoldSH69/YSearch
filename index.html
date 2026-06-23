@@ -7,6 +7,20 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <!-- Password Protection Overlay -->
+    <div id="loginOverlay" class="login-overlay hidden">
+      <div class="login-card">
+        <div class="lock-icon">🔒</div>
+        <h2>YSearch 인증</h2>
+        <p>이 콘솔에 접근하려면 비밀번호를 입력하세요.</p>
+        <form id="loginForm">
+          <input id="loginPassword" type="password" placeholder="비밀번호 입력" required />
+          <button type="submit" class="primary">확인</button>
+          <p id="loginError" class="error-text"></p>
+        </form>
+      </div>
+    </div>
+
     <main class="app-shell">
       <section class="toolbar" aria-label="YouTube search filters">
         <div class="brand">
@@ -15,6 +29,8 @@
             <h1>YSearch</h1>
             <p>YouTube 영상/채널 분석 검색</p>
           </div>
+        </div>
+
         <form id="searchForm">
           <fieldset class="filter-group">
             <legend>서버 검색 조건 (YouTube API 단계 필터)</legend>

@@ -327,6 +327,90 @@ td {
   vertical-align: middle;
 }
 
+/* Login Overlay */
+.login-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(23, 32, 51, 0.6);
+  backdrop-filter: blur(12px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.4s ease, visibility 0.4s ease;
+}
+
+.login-overlay.hidden {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.login-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.15);
+  padding: 32px;
+  width: min(400px, calc(100% - 32px));
+  text-align: center;
+  transform: translateY(0);
+  transition: transform 0.4s ease;
+}
+
+.login-overlay.hidden .login-card {
+  transform: translateY(-20px);
+}
+
+.lock-icon {
+  font-size: 36px;
+  margin-bottom: 16px;
+}
+
+.login-card h2 {
+  font-size: 20px;
+  margin: 0 0 8px 0;
+  font-weight: 800;
+}
+
+.login-card p {
+  font-size: 13.5px;
+  color: var(--muted);
+  margin: 0 0 20px 0;
+}
+
+#loginForm {
+  display: grid;
+  gap: 12px;
+}
+
+#loginForm input {
+  text-align: center;
+  font-size: 15px;
+  letter-spacing: 2px;
+}
+
+.error-text {
+  color: var(--accent);
+  font-size: 12.5px;
+  font-weight: 700;
+  margin: 4px 0 0 0;
+  min-height: 18px;
+}
+
+/* Shake Animation */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-8px); }
+  40%, 80% { transform: translateX(8px); }
+}
+
+.login-card.shake {
+  animation: shake 0.4s ease;
+}
+
 @media (max-width: 1080px) {
   .filter-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
